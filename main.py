@@ -22,7 +22,8 @@ DB_NAME = os.getenv('DB_NAME', '')
 
 register_tortoise(
     app=app,
-    db_url=f'{DB}://{DB_USER}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}' if DB else 'sqlite://:memory:',
+    db_url=f'{DB}://{DB_USER}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}' if DB else 'sqlite://db.sqlite',
+    # db_url=f'{DB}://{DB_USER}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}' if DB else 'sqlite://:memory:',
     modules={'models': ['models.courier', 'models.order']},
     generate_schemas=True
 )
