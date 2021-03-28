@@ -1,12 +1,13 @@
 from typing import List, Dict
 from fastapi import APIRouter
 from pydantic.main import BaseModel
+from fastapi.responses import JSONResponse
 
 from models.courier import Courier
 
 
 class CouriersSchemaRequest(BaseModel):
-    data: List['Courier']
+    data: List
 
     class Config:
         schema_extra = {
@@ -43,13 +44,13 @@ class CouriersSchemaResponse201(BaseModel):
 
 
 class CouriersSchemaResponse400(BaseModel):
-    validation_error: List[Dict]
+    validation_error: Dict
 
     class Config:
         schema_extra = {
             'example':
                 {
-                    'validation_error': [{'id': 1}, {'id': 2}, {'id': 3}]
+                    'validation_error': {'couriers': [{'id': 1}, {'id': 2}, {'id': 3}]}
                 }
         }
 
@@ -61,15 +62,26 @@ post_couriers_route = APIRouter()
                                                   201: {'model': CouriersSchemaResponse201}})
 async def list_of_couriers(request: CouriersSchemaRequest):
     errors = []
-    succeeded: List['Courier'] = []
+    succeeded = []
+    ids = [courier['courier_id'] for courier in request.data]
+
     for courier in request.data:
         try:
-            succeeded.append(Courier(**courier.dict()))
+            valid_courier = Courier(**courier)
+            if await Courier.exists(valid_courier.courier_id) or ids.count(valid_courier.courier_id) != 1:
+                raise ValueError
+            else:
+                succeeded.append(valid_courier)
         except ValueError:
-            errors.append(courier.courier_id)
+            errors.append(courier['courier_id'])
+
     if not errors:
         for courier in succeeded:
             await courier.create()
-        return CouriersSchemaResponse201(couriers=[{'id': courier.courier_id} for courier in succeeded])
+        return JSONResponse(status_code=201, content={
+            'couriers': [{'id': courier.courier_id} for courier in succeeded]
+        })
     else:
-        return CouriersSchemaResponse400(validation_error={'couriers': [{'id': i} for i in errors]})
+        return JSONResponse(status_code=400, content={
+            'validation_error': {'couriers': [{'id': i} for i in errors]}
+        })

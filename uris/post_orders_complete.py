@@ -15,7 +15,7 @@ class OrderCompleteSchemaRequest(BaseModel):
 
     @validator('complete_time')
     def time_validator(cls, v: str):
-        # превращаем строку в datetime и затем обартно в строку с целью валидации на соответствие iso формату
+        # превращаем строку в datetime и затем обратно в строку с целью валидации на соответствие iso формату
         return datetime.fromisoformat(v).isoformat()
 
     class Config:
@@ -66,6 +66,7 @@ async def order_complete(request: OrderCompleteSchemaRequest):
             order.complete_time = (
                     datetime.fromisoformat(request.complete_time) - courier.last_completed.replace(tzinfo=None)
             ).total_seconds()
+        courier.last_completed = datetime.fromisoformat(request.complete_time)
 
         await courier.save()
         await order.save()

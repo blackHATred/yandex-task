@@ -38,14 +38,13 @@ post_orders_assign_route = APIRouter()
 @post_orders_assign_route.post('/orders/assign',
                                responses={400: {}, 200: {'model': OrdersAssignSchemaResponse}})
 async def orders_assign(request: OrdersAssignSchemaRequest):
-    #try:
+    try:
         courier = await Courier.get(id=request.courier_id)
         await courier.find_and_assign_orders()
         if not courier.assigns:
-            return OrdersAssignSchemaResponse(orders=[])
+            return JSONResponse(status_code=200, content={'orders': []})
         return OrdersAssignSchemaResponse(orders=[{'id': i} for i in courier.assigns],
-                                          assign_time=courier.assign_time.isoformat())
-    #except ValueError as e:
-    #    print(str(e))
-    #    return JSONResponse(status_code=400)
+                                          assign_time=courier.assign_time.replace(tzinfo=None).isoformat())
+    except ValueError:
+        return JSONResponse(status_code=400)
 

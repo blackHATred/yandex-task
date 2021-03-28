@@ -1,6 +1,7 @@
 from typing import List, Dict
 from fastapi import APIRouter
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 from models.order import Order
 
@@ -8,7 +9,7 @@ post_orders_route = APIRouter()
 
 
 class OrdersSchemaRequest(BaseModel):
-    data: List['Order']
+    data: List
 
     class Config:
         schema_extra = {
@@ -51,7 +52,7 @@ class OrdersSchemaResponse400(BaseModel):
         schema_extra = {
             'example':
                 {
-                    'validation_error': [{'id': 1}, {'id': 2}, {'id': 3}]
+                    'validation_error': {'orders': [{'id': 1}, {'id': 2}, {'id': 3}]}
                 }
         }
 
@@ -60,15 +61,25 @@ class OrdersSchemaResponse400(BaseModel):
                                               201: {'model': OrdersSchemaResponse201}})
 async def list_of_orders(request: OrdersSchemaRequest):
     errors = []
-    succeeded: List['Order'] = []
+    succeeded = []
+    ids = [order['order_id'] for order in request.data]
+
     for order in request.data:
         try:
-            succeeded.append(Order(**order.dict()))
+            valid_order = Order(**order)
+            if await Order.exists(valid_order.order_id) or ids.count(valid_order.order_id) != 1:
+                raise ValueError
+            else:
+                succeeded.append(valid_order)
         except ValueError:
-            errors.append(order.order_id)
+            errors.append(order['order_id'])
     if not errors:
         for order in succeeded:
             await order.create()
-        return OrdersSchemaResponse201(orders=[{'id': order.order_id} for order in succeeded])
+        return JSONResponse(status_code=201, content={
+            'orders': [{'id': order.order_id} for order in succeeded]
+        })
     else:
-        return OrdersSchemaResponse400(validation_error=[{'id': order} for order in errors])
+        return JSONResponse(status_code=400, content={
+            'validation_error': {'orders': [{'id': order} for order in errors]}
+        })

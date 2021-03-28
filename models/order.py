@@ -65,6 +65,14 @@ class Order(BaseModel):
         updated_order = Order(**self.dict())
         await order_db.update(data=updated_order.dict())
 
+    @staticmethod
+    async def exists(id: int) -> bool:
+        """
+        Проверяет сущестовавние заказа с указанным id
+        :return: True/False
+        """
+        return await OrderDB.exists(order_id=id)
+
 
 class OrderDB(Model):
     order_id = fields.IntField(pk=True)

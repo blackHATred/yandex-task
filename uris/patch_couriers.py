@@ -51,13 +51,13 @@ async def update_courier(id: int, request: CourierPatchSchemaRequest):
             return JSONResponse(status_code=400)
         courier = await Courier.get(id=id)
         if 'courier_type' in request.dict(exclude_none=True):
-            courier.type = request.dict()['courier_type']
+            courier.courier_type = request.dict()['courier_type']
         if 'regions' in request.dict(exclude_none=True):
             courier.regions = request.dict()['regions']
         if 'working_hours' in request.dict(exclude_none=True):
             courier.working_hours = request.dict()['working_hours']
-        await courier.check()
         await courier.save()
+        await courier.check()
         return CourierPatchSchemaResponse(**courier.dict())
 
     except ValueError as e:

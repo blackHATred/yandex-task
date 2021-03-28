@@ -59,8 +59,12 @@ class Courier(BaseModel):
             orders_weight += order.weight
         max_weight = {'car': 50, 'bike': 12, 'foot': 10}[self.courier_type]
         if orders_weight + weight <= max_weight:
+            # если подходит по весу, то проверяем наличие пересечения временных интервалов доставки и работы
             for interval in time_to_int_intervals(self.working_hours):
-                if interval[0] <= order_interval[0] <= interval[1] or interval[0] <= order_interval[1] <= interval[1]:
+                if (interval[0] <= order_interval[0] <= interval[1]
+                        or interval[0] <= order_interval[1] <= interval[1]
+                        or order_interval[0] <= interval[0] <= order_interval[1]
+                        or order_interval[0] <= interval[1] <= order_interval[1]):
                     return True
         return False
 
@@ -100,6 +104,14 @@ class Courier(BaseModel):
             return Courier(**courier.dump())
         else:
             raise ValueError('Courier with this id does not exist')
+
+    @staticmethod
+    async def exists(id: int) -> bool:
+        """
+        Проверяет сущестовавние заказа с указанным id
+        :return: True/False
+        """
+        return await CourierDB.exists(courier_id=id)
 
     async def find_and_assign_orders(self):
         """
@@ -161,13 +173,18 @@ class Courier(BaseModel):
         assigns = list()
         for order in self.assigns:
             o = await Order.get(id=order)
+            o.courier_id = None
+            await o.save()
             assigns.append(o)
         self.assigns = []
         for assign in assigns:
             for interval in time_to_int_intervals(assign.delivery_hours):
-                if self.can_deliver(interval, assign.weight):
+                if await self.can_deliver(interval, assign.weight):
                     self.assigns.append(assign.order_id)
+                    assign.courier_id = self.courier_id
+                    await assign.save()
                     break
+        await self.save()
 
 
 class CourierDB(Model):
