@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 import os
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from routes import router
