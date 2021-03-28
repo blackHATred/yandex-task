@@ -12,6 +12,7 @@ app = FastAPI(
     redoc_url=os.getenv('REDOC_URL', '/redoc'),
 )
 
+print('i`m working!')
 DB = os.getenv('DB', False)
 DB_USER = os.getenv('DB_USER', '')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
